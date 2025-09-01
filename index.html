@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Room Reservation System</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --panel:#111827;
+    --muted:#334155;
+    --ok:#22c55e;
+    --bad:#ef4444;
+    --accent:#38bdf8;
+    --text:#e5e7eb;
+    --chip:#1f2937;
+    --sel:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background:linear-gradient(180deg,#0b1022,#0f172a 30%,#0f172a 70%,#0b1022);
+    color:var(--text);
+  }
+  header{
+    padding:20px clamp(16px,5vw,40px);
+    display:flex; gap:20px; align-items:center; justify-content:space-between;
+  }
+  .title{
+    font-weight:700; letter-spacing:.3px; font-size:clamp(18px,2.2vw,26px);
+  }
+  .panel{
+    background:linear-gradient(180deg,#0e1629,#0a1222);
+    border:1px solid #1f2937;
+    border-radius:16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    padding:16px;
+  }
+  .controls{
+    margin:0 clamp(16px,5vw,40px) 24px;
+    display:grid; grid-template-columns:1fr; gap:12px;
+  }
+  .controls-row{
+    display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+  }
+  label{opacity:.9}
+  input[type="number"]{
+    width:90px; padding:10px 12px; border-radius:10px; border:1px solid #334155;
+    background:#0b1222; color:var(--text); font-weight:600;
+  }
+  button{
+    padding:10px 14px; border-radius:12px; border:1px solid #2b3a55;
+    background:linear-gradient(180deg,#1a2a45,#142138);
+    color:var(--text); font-weight:600; cursor:pointer;
+    transition:.15s transform ease, .15s filter ease, .15s background ease;
+  }
+  button:hover{ transform:translateY(-1px); filter:brightness(1.08); }
+  button:active{ transform:translateY(0); }
+  .primary{ border-color:#2563eb; background:linear-gradient(180deg,#2563eb,#1d4ed8); }
+  .warn{ border-color:#f59e0b; background:linear-gradient(180deg,#f59e0b,#d97706); }
+  .ghost{ background:#111827; border-color:#374151; }
+  .legend{ display:flex; gap:10px; flex-wrap:wrap; font-size:14px; }
+  .chip{ display:flex; align-items:center; gap:6px; background:var(--chip); padding:6px 10px; border-radius:999px; border:1px solid #374151;}
+  .dot{ width:12px;height:12px;border-radius:50%; display:inline-block; }
+  .d-free{ background:var(--ok); }
+  .d-occupied{ background:var(--bad); }
+  .d-selected{ background:var(--sel); }
+  .grid{
+    margin:0 clamp(16px,5vw,40px) 40px;
+    display:grid; grid-template-columns:1fr 3fr;
+    gap:18px;
+  }
+  .floors{ display:flex; flex-direction:column; gap:10px; }
+  .floor-row{
+    display:grid; grid-template-columns: 110px 1fr; align-items:center; gap:10px;
+  }
+  .floor-label{ opacity:.85; font-weight:700; text-align:right; padding-right:8px; }
+  .rooms{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .room{
+    min-width:64px; text-align:center;
+    padding:10px 8px; border-radius:12px; border:1px solid #334155;
+    background:linear-gradient(180deg,#0d1426,#0b1120);
+    position:relative; cursor:pointer; user-select:none;
+    transition:.12s filter ease, .12s transform ease, .12s background ease;
+  }
+  .room.free{ outline:2px solid rgba(34,197,94,.25); }
+  .room.occ{ filter:grayscale(.5) brightness(.85); border-color:#4b5563; background:linear-gradient(180deg,#171923,#0f131e); }
+  .room.sel{ outline:2px solid rgba(245,158,11,.55); box-shadow:0 0 0 4px rgba(245,158,11,.2) inset; }
+  .room .tag{
+    position:absolute; top:6px; right:8px; font-size:11px; opacity:.85;
+    background:#0b1222; border:1px solid #334155; padding:2px 6px; border-radius:999px;
+  }
+  .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .card{ padding:12px; border-radius:12px; background:#0a1120; border:1px solid #25304a; }
+  .value{ font-size:20px; font-weight:800; }
+  .muted{ opacity:.8; font-size:12px; }
+  footer{
+    padding:16px clamp(16px,5vw,40px);
+    opacity:.8; font-size:13px;
+  }
+  @media (max-width: 900px){
+    .grid{ grid-template-columns:1fr; }
+    .floor-row{ grid-template-columns: 90px 1fr; }
+    .room{ min-width:60px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">Hotel Room Reservation System</div>
+    <div class="legend panel">
+      <span class="chip"><span class="dot d-free"></span> Free</span>
+      <span class="chip"><span class="dot d-occupied"></span> Occupied</span>
+      <span class="chip"><span class="dot d-selected"></span> Selected</span>
+    </div>
+  </header>
+
+  <section class="controls panel">
+    <div class="controls-row">
+      <label for="roomCount">Rooms to book (1–5):</label>
+      <input id="roomCount" type="number" min="1" max="5" value="4">
+      <button id="btnBook" class="primary">Book</button>
+      <button id="btnRandom" class="warn">Randomize Occupancy</button>
+      <button id="btnReset" class="ghost">Reset All</button>
+    </div>
+    <div class="metrics">
+      <div class="card">
+        <div class="muted">Selection Cost (Travel time between farthest two rooms)</div>
+        <div class="value" id="metricCost">–</div>
+      </div>
+      <div class="card">
+        <div class="muted">Selected Rooms</div>
+        <div class="value" id="metricRooms">–</div>
+      </div>
+      <div class="card">
+        <div class="muted">Rule Applied</div>
+        <div class="value" id="metricRule">–</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <div style="font-weight:700;margin-bottom:8px;">Floors Overview</div>
+      <div id="floors" class="floors"></div>
+    </div>
+    <div class="panel">
+      <div style="font-weight:700;margin-bottom:8px;">Notes</div>
+      <ol style="line-height:1.6; opacity:.9">
+        <li>Staircase/Lift is on the <b>left</b> side. On each floor, room position 1 is closest to the stairs.</li>
+        <li>Same-floor travel: moving between adjacent rooms takes <b>1 minute per room</b>.</li>
+        <li>Vertical travel: moving between floors takes <b>2 minutes per floor</b> using stairs/lift.</li>
+        <li>Distance between two rooms A(f, pos) and B(g, pos):<br>
+          • If f == g: |posA − posB|<br>
+          • Else: (posA − 1) + 2×|f − g| + (posB − 1)
+        </li>
+        <li>We minimize the “diameter” of the set (maximum pairwise distance), which corresponds to the travel time between the first and last rooms of your booking.</li>
+        <li>Priority: (1) Single-floor solution with minimal span; (2) Otherwise, global minimal diameter. When searching multi-floor, the solver prioritizes adjacent floors for speed and realism.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Built for the assessment. Use Randomize to simulate occupancy, Book to reserve, Reset to clear.
+  </footer>
+
+<script>
+// ------------------------- Data Model -------------------------
+const FLOORS = 10;
+// Floors 1-9: 10 rooms each (101-110, 201-210, ...).
+// Floor 10: 7 rooms (1001-1007).
+function buildHotel(){
+  const hotel = [];
+  for(let f=1; f<=9; f++){
+    const rooms = [];
+    for(let i=1; i<=10; i++){
+      rooms.push({ floor:f, pos:i, number: f*100 + i, occupied:false, selected:false });
+    }
+    hotel.push(rooms);
+  }
+  // top floor
+  const top = [];
+  for(let i=1; i<=7; i++){
+    top.push({ floor:10, pos:i, number: 1000 + i, occupied:false, selected:false });
+  }
+  hotel.push(top);
+  return hotel;
+}
+let HOTEL = buildHotel();
+
+// ------------------------- Utils -------------------------
+function distance(a,b){
+  if(a.floor === b.floor){
+    return Math.abs(a.pos - b.pos);
+  }
+  return (a.pos - 1) + 2 * Math.abs(a.floor - b.floor) + (b.pos - 1);
+}
+function setAllSelected(val){
+  for(const floor of HOTEL){
+    for(const r of floor){ r.selected = !!val; }
+  }
+}
+function getAllRooms(){
+  return HOTEL.flat();
+}
+function getAvailableRooms(){
+  return getAllRooms().filter(r=>!r.occupied);
+}
+function markSelected(rooms){
+  setAllSelected(false);
+  for(const r of rooms){
+    r.selected = true;
+  }
+}
+function formatRooms(list){
+  return list.map(r=>r.number).sort((a,b)=>a-b).join(", ");
+}
+function selectionCost(rooms){
+  if(rooms.length <= 1) return 0;
+  let maxD = 0;
+  for(let i=0;i<rooms.length;i++){
+    for(let j=i+1;j<rooms.length;j++){
+      maxD = Math.max(maxD, distance(rooms[i], rooms[j]));
+    }
+  }
+  return maxD;
+}
+
+// ------------------------- Single-Floor Solver -------------------------
+// Among floors with >= k available rooms, choose the k rooms that minimize span.
+function trySingleFloor(k){
+  let best = null;
+  for(const floor of HOTEL){
+    const free = floor.filter(r=>!r.occupied);
+    if(free.length >= k){
+      // Sort by pos; try sliding window of size k
+      free.sort((a,b)=>a.pos-b.pos);
+      for(let i=0;i+ k-1<free.length;i++){
+        const window = free.slice(i, i+k);
+        const span = window[window.length-1].pos - window[0].pos; // same-floor cost
+        const cost = span; // diameter equals span here
+        const candidate = { rooms:[...window], cost, rule:"Single floor (minimal span)" };
+        if(!best ||
+           cost < best.cost ||
+           (cost === best.cost && (window[0].floor < best.rooms[0].floor ||
+            (window[0].floor === best.rooms[0].floor && window[0].pos < best.rooms[0].pos)))){
+          best = candidate;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ------------------------- Multi-Floor Solver -------------------------
+// We minimize set diameter using the distance() metric. We search adjacent floors
+// windows (size 2 or 3) to keep it fast and realistic.
+function tryMultiFloor(k){
+  const floorsCount = HOTEL.length;
+  let best = null;
+  for(let start=0; start<floorsCount; start++){
+    for(let span=1; span<=3; span++){ // consider 1,2,3-floor spans (i.e., up to 3 floors)
+      const end = Math.min(floorsCount-1, start+span-1);
+      const pool = [];
+      for(let f=start; f<=end; f++){
+        // Take up to first 6 free rooms nearest to stairs on each floor
+        const free = HOTEL[f].filter(r=>!r.occupied).sort((a,b)=>a.pos-b.pos).slice(0,6);
+        pool.push(...free);
+      }
+      if(pool.length < k) continue;
+      // For small k (<=5), try greedy + local search: start from the leftmost rooms
+      pool.sort((a,b)=> (a.floor-b.floor) || (a.pos-b.pos));
+      // Seed candidates as combinations anchored at each element with nearest neighbors
+      for(let anchorIdx=0; anchorIdx<pool.length; anchorIdx++){
+        const anchor = pool[anchorIdx];
+        // compute neighbors by distance to anchor
+        const others = pool.slice(0,anchorIdx).concat(pool.slice(anchorIdx+1));
+        others.sort((u,v)=> distance(anchor,u) - distance(anchor,v));
+        const pick = [anchor, ...others.slice(0, k-1)];
+        const cost = selectionCost(pick);
+        const candidate = { rooms: pick, cost, rule:"Multi-floor (adjacent floors, minimal diameter)" };
+        if(!best || cost < best.cost) best = candidate;
+
+        // small local improvement: try to replace one room with next best
+        for(let t= k-1; t< Math.min(k+3, others.length); t++){
+          const trial = [anchor, ...others.slice(0, k-2), others[t]];
+          const cst = selectionCost(trial);
+          if(cst < best.cost){
+            best = { rooms: trial, cost:cst, rule:"Multi-floor (refined)" };
+          }
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ------------------------- Booking Orchestrator -------------------------
+function computeBooking(k){
+  // 1) Same-floor priority
+  const single = trySingleFloor(k);
+  if(single) return single;
+
+  // 2) Multi-floor
+  return tryMultiFloor(k);
+}
+
+// ------------------------- Rendering -------------------------
+const floorsEl = document.getElementById('floors');
+function render(){
+  floorsEl.innerHTML = "";
+  // Floors displayed 10 -> 1 (top to bottom)
+  for(let idx=HOTEL.length-1; idx>=0; idx--){
+    const floorRooms = HOTEL[idx];
+    const floorNum = floorRooms[0].floor;
+    const row = document.createElement('div');
+    row.className = "floor-row";
+
+    const label = document.createElement('div');
+    label.className = "floor-label";
+    label.textContent = `Floor ${floorNum}`;
+    row.appendChild(label);
+
+    const roomsWrap = document.createElement('div');
+    roomsWrap.className = "rooms";
+
+    for(const r of floorRooms){
+      const div = document.createElement('div');
+      div.className = "room " + (r.occupied ? "occ" : "free") + (r.selected ? " sel" : "");
+      div.innerHTML = `<div class="tag">${r.pos}</div>${r.number}`;
+      div.title = `Floor ${r.floor}, Position ${r.pos} ${r.occupied? "(occupied)":"(free)"}`;
+      div.onclick = ()=>{
+        // Toggle occupancy by click
+        r.occupied = !r.occupied;
+        r.selected = false;
+        updateMetrics([], "—");
+        render();
+      };
+      roomsWrap.appendChild(div);
+    }
+    row.appendChild(roomsWrap);
+    floorsEl.appendChild(row);
+  }
+}
+function updateMetrics(rooms, rule){
+  const mCost = document.getElementById('metricCost');
+  const mRooms = document.getElementById('metricRooms');
+  const mRule = document.getElementById('metricRule');
+  if(rooms.length){
+    mCost.textContent = selectionCost(rooms);
+    mRooms.textContent = formatRooms(rooms);
+    mRule.textContent = rule;
+  }else{
+    mCost.textContent = "–";
+    mRooms.textContent = "–";
+    mRule.textContent = "–";
+  }
+}
+
+// ------------------------- Controls -------------------------
+document.getElementById('btnBook').addEventListener('click', ()=>{
+  const k = Math.max(1, Math.min(5, parseInt(document.getElementById('roomCount').value || "1", 10)));
+  const free = getAvailableRooms();
+  if(free.length < k){
+    alert(`Only ${free.length} free rooms left. Reduce your request.`);
+    return;
+  }
+  const result = computeBooking(k);
+  if(!result){
+    alert("No valid selection found.");
+    return;
+  }
+  markSelected(result.rooms);
+  updateMetrics(result.rooms, result.rule);
+  render();
+});
+
+document.getElementById('btnRandom').addEventListener('click', ()=>{
+  // Clear selection
+  setAllSelected(false);
+  // Randomly occupy around 45–70% of rooms
+  const rooms = getAllRooms();
+  for(const r of rooms){
+    r.occupied = Math.random() < (0.45 + Math.random()*0.25);
+  }
+  updateMetrics([], "—");
+  render();
+});
+
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  HOTEL = buildHotel();
+  updateMetrics([], "—");
+  render();
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>
